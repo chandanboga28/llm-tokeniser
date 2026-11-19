@@ -1,0 +1,2985 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Pipeline Explorer — Text to Tokens to 3D Vectors</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    /* ═══════════════════════════════════════════════════════
+     RESET & DESIGN SYSTEM (APPLE LIGHT THEME)
+  ═══════════════════════════════════════════════════════ */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-surface-subtle: #f1f5f9;
+      --border: #e2e8f0;
+      --border-hover: #cbd5e1;
+      --border-strong: #94a3b8;
+
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+
+      --accent-blue: #2563eb;
+      --accent-blue-hover: #1d4ed8;
+      --accent-blue-subtle: #eff6ff;
+      --accent-blue-border: #bfdbfe;
+
+      --accent-violet: #7c3aed;
+      --accent-violet-subtle: #f5f3ff;
+      --accent-violet-border: #ddd6fe;
+
+      --accent-teal: #0d9488;
+      --accent-teal-subtle: #f0fdfa;
+      --accent-teal-border: #99f6e4;
+
+      --accent-green: #16a34a;
+      --accent-green-subtle: #f0fdf4;
+      --accent-green-border: #bbf7d0;
+
+      --accent-amber: #d97706;
+      --accent-amber-subtle: #fffbeb;
+      --accent-amber-border: #fde68a;
+
+      --accent-rose: #e11d48;
+      --accent-rose-subtle: #fff1f2;
+      --accent-rose-border: #fecdd3;
+
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 18px;
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     HEADER & NAVIGATION
+  ═══════════════════════════════════════════════════════ */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-title-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      background: var(--accent-blue-subtle);
+      color: var(--accent-blue);
+      border: 1px solid var(--accent-blue-border);
+      border-radius: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .header-tagline {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+    }
+
+    nav a:hover {
+      color: var(--accent-blue);
+      background: var(--accent-blue-subtle);
+      border-color: var(--accent-blue-border);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     MAIN LAYOUT & SECTIONS
+  ═══════════════════════════════════════════════════════ */
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 36px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 56px;
+    }
+
+    section {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .section-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--accent-blue);
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .section-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     PANELS & CARDS (LIGHT THEME)
+  ═══════════════════════════════════════════════════════ */
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .panel:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-md);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     FORM ELEMENTS
+  ═══════════════════════════════════════════════════════ */
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 12px 14px;
+      line-height: 1.6;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+
+    textarea:focus,
+    input[type="text"]:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: #ffffff;
+      box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-blue-hover);
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--bg-surface-subtle);
+      color: var(--text-primary);
+      border-color: var(--border-hover);
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn.active {
+      background: var(--accent-blue-subtle);
+      color: var(--accent-blue);
+      border-color: var(--accent-blue-border);
+    }
+
+    /* Quick presets buttons */
+    .preset-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .preset-pill {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.12s ease;
+    }
+
+    .preset-pill:hover {
+      background: var(--accent-blue-subtle);
+      color: var(--accent-blue);
+      border-color: var(--accent-blue-border);
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+
+    .btn.loading .spinner {
+      display: inline-block;
+    }
+
+    .btn.loading .btn-text {
+      opacity: 0.8;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Inline messages */
+    .inline-error {
+      font-size: 12px;
+      color: var(--accent-rose);
+      background: var(--accent-rose-subtle);
+      border: 1px solid var(--accent-rose-border);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      display: none;
+    }
+
+    .inline-error.visible {
+      display: block;
+    }
+
+    .inline-notice {
+      font-size: 12px;
+      color: var(--accent-amber);
+      background: var(--accent-amber-subtle);
+      border: 1px solid var(--accent-amber-border);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      line-height: 1.5;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     TABLES (VOCABULARY & CLOSEST PAIRS)
+  ═══════════════════════════════════════════════════════ */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    thead th {
+      background: var(--bg-surface-subtle);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 0.02em;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s ease;
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    tbody td {
+      padding: 10px 16px;
+      color: var(--text-primary);
+    }
+
+    .token-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+    }
+
+    .badge-word {
+      background: var(--accent-blue-subtle);
+      color: var(--accent-blue);
+      border: 1px solid var(--accent-blue-border);
+    }
+
+    .badge-stem {
+      background: #eef2ff;
+      color: #4338ca;
+      border: 1px solid #c7d2fe;
+    }
+
+    .badge-continuation {
+      background: var(--accent-violet-subtle);
+      color: var(--accent-violet);
+      border: 1px solid var(--accent-violet-border);
+    }
+
+    .badge-punctuation {
+      background: var(--bg-surface-subtle);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .badge-special {
+      background: var(--accent-amber-subtle);
+      color: var(--accent-amber);
+      border: 1px solid var(--accent-amber-border);
+    }
+
+    .vocab-stats {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .stat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+    }
+
+    .stat-chip .stat-val {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     TOKEN CHIPS & VISUAL BREAKDOWN
+  ═══════════════════════════════════════════════════════ */
+    .original-sentence {
+      font-size: 13px;
+      color: var(--text-secondary);
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .original-sentence .orig-tag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-blue);
+      background: var(--accent-blue-subtle);
+      border: 1px solid var(--accent-blue-border);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .original-sentence .orig-text {
+      font-style: italic;
+      color: var(--text-primary);
+    }
+
+    .token-output {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .token-chip {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .token-chip:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-hover);
+    }
+
+    .token-chip.selected {
+      outline: 2px solid var(--accent-blue);
+      outline-offset: 1px;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+    }
+
+    .chip-label {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .chip-meta {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Chip category variants */
+    .chip-word {
+      background: var(--accent-blue-subtle);
+      border-color: var(--accent-blue-border);
+    }
+
+    .chip-word .chip-label {
+      color: #1d4ed8;
+    }
+
+    .chip-stem {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+    }
+
+    .chip-stem .chip-label {
+      color: #4338ca;
+    }
+
+    .chip-continuation {
+      background: var(--accent-violet-subtle);
+      border: 1px dashed var(--accent-violet-border);
+    }
+
+    .chip-continuation .chip-label {
+      color: #6d28d9;
+    }
+
+    .chip-punctuation {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .chip-punctuation .chip-label {
+      color: #334155;
+    }
+
+    .chip-special {
+      background: var(--accent-amber-subtle);
+      border-color: var(--accent-amber-border);
+    }
+
+    .chip-special .chip-label {
+      color: #b45309;
+    }
+
+    .token-meta-bar {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .coverage-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .coverage-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .coverage-bar-fill {
+      height: 100%;
+      background: var(--accent-blue);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .coverage-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     TOKEN INSPECTOR CARD
+  ═══════════════════════════════════════════════════════ */
+    .token-inspector {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .inspector-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .inspector-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .inspector-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    .inspector-type {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .inspector-body {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+    }
+
+    .inspector-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .inspector-k {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .inspector-v {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .inspector-v.font-mono {
+      font-family: var(--font-mono);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     THREE.JS 3D CANVAS & CONTROLS
+  ═══════════════════════════════════════════════════════ */
+    #canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 600px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      box-shadow: var(--shadow-md);
+    }
+
+    #three-canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .canvas-controls {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .canvas-controls .btn {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    .canvas-controls .btn:hover {
+      background: #ffffff;
+      border-color: var(--border-hover);
+    }
+
+    .canvas-axis-legend {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 12px;
+      z-index: 10;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .axis-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+
+    .axis-x {
+      color: #dc2626;
+    }
+
+    .axis-y {
+      color: #16a34a;
+    }
+
+    .axis-z {
+      color: #2563eb;
+    }
+
+    /* 3D point floating label */
+    .point-label {
+      position: absolute;
+      pointer-events: none;
+      white-space: nowrap;
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 6px;
+      transform: translate(-50%, -135%);
+      transition: opacity 0.15s ease;
+      opacity: 0;
+      z-index: 20;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .point-label.visible {
+      opacity: 1;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 4px 2px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .legend-dot-custom {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ea580c;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 0 1.5px #ea580c;
+    }
+
+    /* Detail panel for selected point */
+    #detail-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    #detail-panel.visible {
+      display: flex;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+    }
+
+    .detail-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .detail-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .detail-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Closest pairs */
+    .closest-pairs-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pair-row {
+      cursor: pointer;
+    }
+
+    .pair-row:hover td {
+      background: var(--accent-blue-subtle) !important;
+    }
+
+    .rank-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     EDUCATIONAL NOTES & CARDS
+  ═══════════════════════════════════════════════════════ */
+    .edu-note {
+      background: var(--accent-blue-subtle);
+      border: 1px solid var(--accent-blue-border);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      font-size: 13px;
+      color: #1e3a8a;
+      line-height: 1.6;
+    }
+
+    .edu-note code {
+      font-family: var(--font-mono);
+      background: rgba(37, 99, 235, 0.1);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--accent-blue);
+    }
+
+    .edu-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .edu-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .edu-card h4 {
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .edu-card p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .disclaimer-banner {
+      background: var(--accent-amber-subtle);
+      border: 1px solid var(--accent-amber-border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #92400e;
+      line-height: 1.5;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .disclaimer-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+     SECTION 03 CUSTOM MATCH BOX
+  ═══════════════════════════════════════════════════════ */
+    #custom-result {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #custom-result.visible {
+      display: flex;
+    }
+
+    .closest-match-box {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent-blue);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .cm-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    #closest-match-text {
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    /* Tooltip for hovering on chips */
+    .chip-tooltip {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      white-space: nowrap;
+      font-family: var(--font-sans);
+    }
+
+    .chip-tooltip.visible {
+      opacity: 1;
+    }
+
+    /* Responsive layout */
+    @media (max-width: 768px) {
+      header {
+        padding: 0 16px;
+      }
+
+      main {
+        padding: 20px 16px 60px;
+        gap: 40px;
+      }
+
+      #canvas-wrap {
+        height: 440px;
+      }
+
+      .panel {
+        padding: 18px;
+      }
+
+      nav a {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- TOOLTIP -->
+  <div class="chip-tooltip" id="chip-tooltip"></div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-brand">
+      <div class="header-title">
+        LLM PIPELINE EXPLORER
+        <span class="header-title-badge">Interactive Lab</span>
+      </div>
+      <div class="header-tagline">How text becomes tokens, and then becomes points in 3D space.</div>
+    </div>
+    <nav>
+      <a href="#section-01">§01 Tokenizer</a>
+      <a href="#section-02">§02 Embeddings</a>
+      <a href="#section-03">§03 Try Your Own</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ═══════════════════════════════════════════════════════
+     SECTION 01 — TOKENIZER
+═══════════════════════════════════════════════════════ -->
+    <section id="section-01">
+      <div class="section-header">
+        <div class="section-label">01 — Pipeline Stage One</div>
+        <h2 class="section-title">01 — Tokenizer</h2>
+        <div class="section-subtitle">Text → Numbers · Corpus-Derived Vocabulary &amp; WordPiece-Inspired Segmentation
+        </div>
+      </div>
+
+      <!-- A: Training Corpus -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">A. Sentences to Learn Words From (Training Corpus)</div>
+            <div class="panel-desc">Build a vocabulary genuinely derived from sample sentences. Root words, punctuation,
+              and continuation subwords are extracted with true corpus counts.</div>
+          </div>
+        </div>
+        <textarea id="corpus-textarea" spellcheck="false">The cat sat on the mat.
+The bat sat on the mat.
+I love programming in Python.
+Coding in Python is my passion.
+A kitten rested on the rug.
+The stock market crashed today.
+Artificial intelligence is transforming technology.
+Machine learning helps computers learn patterns.</textarea>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-build-vocab" onclick="buildVocab()">
+            <div class="spinner"></div>
+            <span class="btn-text">Build Vocabulary</span>
+          </button>
+        </div>
+        <div class="inline-error" id="err-build"></div>
+      </div>
+
+      <!-- Vocab output table -->
+      <div class="panel" id="vocab-output" style="display:none;">
+        <div class="panel-header">
+          <div class="panel-title">Learned Vocabulary</div>
+          <div class="vocab-stats" id="vocab-stats"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+          <div style="font-size:12px; color:var(--text-secondary); line-height:1.5;">
+            <strong>Corpus Freq:</strong> Standalone occurrences in training text. &nbsp;·&nbsp;
+            <strong>Stem Support:</strong> Accepted decompositions supporting derived stems or continuation subwords.
+          </div>
+          <input type="text" id="vocab-search" placeholder="Search tokens by text or ID…"
+            style="max-width:240px; font-size:12px; padding:6px 12px;" oninput="filterVocabTable()">
+        </div>
+        <div class="table-wrap" style="max-height: 320px;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 85px;">Token ID</th>
+                <th>Token</th>
+                <th style="width: 135px;">Type</th>
+                <th style="width: 105px;" title="Actual occurrences of the complete standalone word or punctuation in corpus">Corpus Freq</th>
+                <th style="width: 145px;" title="Number of accepted corpus decompositions supporting this stem or continuation subword">Stem / Subword Support</th>
+              </tr>
+            </thead>
+            <tbody id="vocab-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- B: Encode a Sentence -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">B. Encode a Sentence</div>
+            <div class="panel-desc">Test tokenization on words requiring subword splitting, exact vocabulary matches, or
+              unknown words.</div>
+          </div>
+        </div>
+        <input type="text" id="encode-input" value="The cats learned Python coding."
+          placeholder="Enter a sentence to tokenize…">
+        <div class="preset-pills">
+          <span>Try examples:</span>
+          <span class="preset-pill" onclick="setEncodeInput('The cats learned Python coding.')">Subwords: "The cats
+            learned Python coding."</span>
+          <span class="preset-pill" onclick="setEncodeInput('The cat loves coding in Python.')">Subwords: "The cat loves
+            coding in Python."</span>
+          <span class="preset-pill" onclick="setEncodeInput('Coding in Python is my passion.')">Full Words: "Coding in
+            Python is my passion."</span>
+          <span class="preset-pill" onclick="setEncodeInput('unprecedented zebra spaceship')">Unknown: "unprecedented
+            zebra spaceship"</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="tokenizeSentence()">Tokenize</button>
+        </div>
+        <div class="inline-error" id="err-tokenize"></div>
+
+        <div id="token-output-wrap" style="display:none; flex-direction:column; gap:12px; margin-top:4px;">
+          <div class="original-sentence" id="token-original-sentence"></div>
+          <div>
+            <div
+              style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:0.04em;">
+              Generated Tokens (Click any token to inspect details)
+            </div>
+            <div class="token-output" id="token-output"></div>
+          </div>
+          <div class="token-meta-bar">
+            <div id="token-meta"></div>
+            <div class="coverage-bar-wrap">
+              <div class="coverage-bar">
+                <div class="coverage-bar-fill" id="coverage-fill" style="width:0%"></div>
+              </div>
+              <div class="coverage-label" id="coverage-label">0%</div>
+            </div>
+          </div>
+          <div class="token-inspector" id="token-inspector" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- Educational Note for Section 1 -->
+      <div class="edu-note">
+        <strong>Educational Note — Corpus-Derived Tokenization:</strong>
+        Tokenization converts raw text into discrete integer IDs. In this educational pipeline, the vocabulary is
+        <strong>genuinely derived from the training corpus</strong> without hardcoding. When a word was not observed in
+        whole form (such as <code>cats</code> or <code>learned</code>), the greedy longest-match algorithm decomposes it
+        using corpus-learned stems (<code>cat</code>, <code>learn</code>) and continuation subwords (<code>##s</code>,
+        <code>##ed</code>), where continuation tokens have their own distinct IDs. Unsegmentable words (such as
+        <code>zebra</code>) fall back to a single <code>[UNK]</code> token (ID 0). Punctuation marks are preserved as
+        separate tokens.
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+     SECTION 02 — EMBEDDINGS IN 3D
+═══════════════════════════════════════════════════════ -->
+    <section id="section-02">
+      <div class="section-header">
+        <div class="section-label">02 — Pipeline Stage Two</div>
+        <h2 class="section-title">02 — Embeddings in 3D</h2>
+        <div class="section-subtitle">Numbers → Geometry · Mean Pooling &amp; Approximate PCA Projection</div>
+      </div>
+
+      <!-- Disclaimer on simulated vectors -->
+      <div class="disclaimer-banner">
+        <span class="disclaimer-icon">ℹ️</span>
+        <div>
+          <strong>Educational Simulation Disclaimer:</strong>
+          These embeddings are deterministic simulated vectors generated from token hashes. They demonstrate the
+          mechanics of vectorization and dimensionality reduction, but they do not capture real-world semantic meaning.
+        </div>
+      </div>
+
+      <!-- A: Sentences to embed -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Sentences to Embed</div>
+            <div class="panel-desc">Enter at least 2 distinct sentences (one per line) to project into 3D vector space.
+              Transactional computation preserves previous visualizations if calculation fails.</div>
+          </div>
+        </div>
+        <textarea id="embed-textarea" style="min-height:140px;" spellcheck="false">The cat sat on the mat.
+The bat sat on the mat.
+I love programming in Python.
+Coding in Python is my passion.
+A kitten rested on the rug.
+The stock market crashed today.</textarea>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-embed" onclick="embedAndPlot()">
+            <div class="spinner"></div>
+            <span class="btn-text">Embed and Plot</span>
+          </button>
+        </div>
+        <div class="inline-error" id="err-embed"></div>
+        <div class="inline-notice" id="rebuild-notice" style="display:none; margin-top:12px;"></div>
+        <div class="inline-notice" id="pca-notice" style="display:none;"></div>
+      </div>
+
+      <!-- 3D Canvas Viewport -->
+      <div id="canvas-wrap" style="display:none;">
+        <canvas id="three-canvas"></canvas>
+
+        <div class="canvas-controls">
+          <button class="btn" id="btn-reset-view" onclick="resetView()">↺ Reset View</button>
+          <button class="btn" id="btn-auto-rotate" onclick="toggleAutoRotate()">⟳ Auto-Rotate</button>
+        </div>
+
+        <div class="canvas-axis-legend">
+          <span>Approximate PCA Axes:</span>
+          <span class="axis-tag axis-x">■ PC 1</span>
+          <span class="axis-tag axis-y">■ PC 2</span>
+          <span class="axis-tag axis-z">■ PC 3</span>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend" id="scene-legend" style="display:none;">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#2563eb;"></div> Cat / Mat / Nature
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#7c3aed;"></div> Python / Coding
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#0d9488;"></div> Stock / Market
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#16a34a;"></div> AI / Machine Learning
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot-custom"></div> User-Added Custom Sentences (Highlighted)
+        </div>
+      </div>
+
+      <!-- Detail Panel for Selected Point -->
+      <div id="detail-panel">
+        <div
+          style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">
+          Selected 3D Point Details</div>
+        <div class="detail-grid">
+          <div class="detail-row" style="grid-column: 1 / -1;">
+            <span class="detail-label">Sentence</span>
+            <span class="detail-value" id="dp-sentence">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Principal Component 1 (X)</span>
+            <span class="detail-value font-mono" id="dp-x">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Principal Component 2 (Y)</span>
+            <span class="detail-value font-mono" id="dp-y">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Principal Component 3 (Z)</span>
+            <span class="detail-value font-mono" id="dp-z">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">32D Vector L2 Norm</span>
+            <span class="detail-value font-mono" id="dp-norm">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Closest pairs table -->
+      <div class="closest-pairs-section panel" id="closest-pairs-section" style="display:none;">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Closest Pairs Analysis (Cosine Similarity Ranking)</div>
+            <div class="panel-desc">Top 5 sentence pairs ranked by cosine similarity. Click any row to pulse both points
+              in the 3D scene.</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 70px;">Rank</th>
+                <th>Sentence A</th>
+                <th>Sentence B</th>
+                <th style="width: 140px;">Cosine Similarity</th>
+              </tr>
+            </thead>
+            <tbody id="closest-pairs-body"></tbody>
+          </table>
+        </div>
+        <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">
+          <strong>Note on Scores:</strong> Cosine similarity values range from -1.0 (opposite) to +1.0 (identical
+          direction). These scores reflect the simulated hash embeddings of shared tokens rather than actual semantic
+          language understanding.
+        </div>
+      </div>
+
+      <!-- Educational Explanations Cards -->
+      <div class="edu-cards" id="edu-cards-02">
+        <div class="edu-card">
+          <h4 style="color:var(--accent-blue);">Embeddings &amp; Mean Pooling</h4>
+          <p>Tokens are mapped to 32-dimensional vectors. A sentence embedding is formed via mean pooling (the
+            component-wise average of all token vectors). In an actual LLM, embeddings are learned parameters; here they
+            are deterministically generated from token character hashes for educational clarity.</p>
+        </div>
+        <div class="edu-card">
+          <h4 style="color:var(--accent-violet);">Cosine Similarity</h4>
+          <p>Measures the cosine of the angle between two multi-dimensional vectors: cos(θ) = (A · B) / (||A|| ||B||). A
+            score of +1.0 denotes identical direction regardless of length. Sentences sharing identical tokens exhibit
+            higher simulated similarity.</p>
+        </div>
+        <div class="edu-card">
+          <h4 style="color:var(--accent-teal);">Approximate PCA (Power Iteration)</h4>
+          <p>Reduces 32-dimensional vectors to 3 visual dimensions by approximating the orthogonal axes of greatest
+            variance. We calculate the mean-centered covariance matrix and estimate the top eigenvectors using iterative
+            power iteration and Hotelling's deflation.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+     SECTION 03 — TRY YOUR OWN WORD OR SENTENCE
+═══════════════════════════════════════════════════════ -->
+    <section id="section-03">
+      <div class="section-header">
+        <div class="section-label">03 — Interactive Experimentation</div>
+        <h2 class="section-title">03 — Try Your Own Word or Sentence</h2>
+        <div class="section-subtitle">Tokenize, Embed &amp; Add to Plot · Live Dynamic Projection</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Your Custom Input</div>
+            <div class="panel-desc">Enter any sentence to watch it get tokenized, embedded, and projected into the
+              existing 3D space with distinct orange styling.</div>
+          </div>
+        </div>
+        <input type="text" id="custom-input"
+          placeholder="Type any word or sentence (e.g., 'The quick cat coded in Python.')">
+        <div class="inline-notice" id="custom-rebuild-notice" style="display:none; margin: 10px 0;"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-custom" onclick="addCustomEntry()" disabled title="Please click 'Embed and Plot' in Section 02 first.">Tokenize, Embed &amp; Add to Plot</button>
+        </div>
+        <div class="inline-error" id="err-custom"></div>
+      </div>
+
+      <div id="custom-result">
+        <div class="panel">
+          <div class="panel-title">Tokenized Representation</div>
+          <div class="original-sentence" id="custom-original-sentence"></div>
+          <div class="token-output" id="custom-token-output"></div>
+          <div class="token-meta-bar" id="custom-token-meta"></div>
+          <div class="token-inspector" id="custom-token-inspector" style="display:none;"></div>
+        </div>
+
+        <div class="closest-match-box">
+          <div class="cm-label">Closest Matching Sentence in 3D Plot</div>
+          <div id="closest-match-text">—</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // ============================================================
+    //  GLOBAL APPLICATION STATE
+    // ============================================================
+    const state = {
+      vocab: new Map(),        // token -> { id, freq, type }
+      inverseVocab: new Map(), // id -> token
+      sentences: [],           // [{ text, embedding, pcaCoords, isCustom, mesh, labelEl }]
+      customEntries: [],       // same structure for custom additions
+      pcaComponents: null,     // [pc0, pc1, pc2] 32D eigenvectors
+      pcaMean: null,           // 32D mean vector
+      pcaScale: 1,             // coordinate normalization factor
+      validDimensions: 3,      // number of non-zero variance components
+      vocabBuilt: false,
+      embeddingsComputed: false,
+      scene: null,
+      camera: null,
+      renderer: null,
+      controls: null,
+      raycaster: new THREE.Raycaster(),
+      hoveredMesh: null,
+      selectedMesh: null,
+      animatingReset: false,
+      resetTarget: null,
+    };
+
+    const MOUSE = new THREE.Vector2();
+    let animFrameId = null;
+    let resetLerpT = 0;
+
+    // Helper to quickly populate encode input from sample pills
+    function setEncodeInput(val) {
+      const el = document.getElementById('encode-input');
+      if (el) {
+        el.value = val;
+        tokenizeSentence();
+      }
+    }
+
+    // ============================================================
+    //  CATEGORY CLASSIFIER & PALETTE (LIGHT THEME)
+    // ============================================================
+    function getSentenceColor(text) {
+      const t = text.toLowerCase();
+      if (/\b(cat|bat|mat|kitten|rug|rested)\b/.test(t)) return 0x2563eb; // Royal Blue
+      if (/\b(python|coding|programming|passion|love)\b/.test(t)) return 0x7c3aed; // Violet
+      if (/\b(stock|market|crashed|today)\b/.test(t)) return 0x0d9488; // Teal
+      if (/\b(artificial|intelligence|machine|learning|technology|computers|patterns|transforming)\b/.test(t)) return 0x16a34a; // Green
+      return 0x475569; // Neutral Slate
+    }
+
+    // ============================================================
+    //  TEXT NORMALIZATION & PUNCTUATION PRESERVATION
+    // ============================================================
+    function normalizeText(text) {
+      // Isolate punctuation marks as distinct individual tokens so they are preserved
+      return text
+        .toLowerCase()
+        .replace(/([.,!?;:()\[\]{}'"\`“”—\-])/g, ' $1 ')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    }
+
+    function escHtml(s) {
+      if (typeof s !== 'string') return '';
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add('visible');
+    }
+
+    function hideError(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('visible');
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.disabled = loading;
+      if (loading) btn.classList.add('loading');
+      else btn.classList.remove('loading');
+    }
+
+    // ============================================================
+    //  01-A: GENUINELY CORPUS-DERIVED VOCABULARY BUILDER
+    //  No hardcoded stems, no hardcoded continuation tokens,
+    //  and no fabricated frequencies.
+    // ============================================================
+    function invalidateEmbeddingState(isVocabRebuild = false) {
+      // Cleanly dispose of all Three.js meshes, materials, geometries, and DOM labels FIRST
+      clearScenePoints();
+
+      state.embeddingsComputed = false;
+      state.pcaComponents = null;
+      state.pcaMean = null;
+      state.pcaScale = 1;
+      state.validDimensions = 0;
+      state.sentences = [];
+      state.customEntries = [];
+      state.hoveredMesh = null;
+      state.selectedMesh = null;
+
+      // Reset and hide 3D canvas and dependent UI sections
+      const canvasWrap = document.getElementById('canvas-wrap');
+      if (canvasWrap) canvasWrap.style.display = 'none';
+
+      const legend = document.getElementById('scene-legend');
+      if (legend) legend.style.display = 'none';
+
+      const pairsSection = document.getElementById('closest-pairs-section');
+      if (pairsSection) pairsSection.style.display = 'none';
+
+      const pairsBody = document.getElementById('closest-pairs-body');
+      if (pairsBody) pairsBody.innerHTML = '';
+
+      const detailPanel = document.getElementById('detail-panel');
+      if (detailPanel) detailPanel.classList.remove('visible');
+
+      const customResult = document.getElementById('custom-result');
+      if (customResult) customResult.style.display = 'none';
+
+      // Disable custom sentence insertion until fresh embeddings & PCA space are computed
+      const btnCustom = document.getElementById('btn-custom');
+      if (btnCustom) {
+        btnCustom.disabled = true;
+        btnCustom.classList.add('disabled');
+        btnCustom.title = 'Please click "Embed and Plot" in Section 02 first.';
+      }
+
+      // Display informative rebuild notices
+      const rebuildNotice = document.getElementById('rebuild-notice');
+      if (rebuildNotice) {
+        if (isVocabRebuild) {
+          rebuildNotice.style.display = 'block';
+          rebuildNotice.innerHTML = `<strong>Vocabulary Changed:</strong> The vocabulary has been updated. Previously computed 3D embeddings and PCA projections have been invalidated. Please click <strong>"Embed and Plot"</strong> below to establish a new 3D coordinate space before adding custom sentences.`;
+        } else {
+          rebuildNotice.style.display = 'none';
+        }
+      }
+
+      const customNotice = document.getElementById('custom-rebuild-notice');
+      if (customNotice) {
+        if (isVocabRebuild) {
+          customNotice.style.display = 'block';
+          customNotice.innerHTML = `<strong>Attention:</strong> The vocabulary changed. Please run <strong>"Embed and Plot"</strong> in Section 02 before adding custom sentences.`;
+        } else {
+          customNotice.style.display = 'none';
+        }
+      }
+    }
+
+    function buildVocab() {
+      hideError('err-build');
+      const corpus = document.getElementById('corpus-textarea').value.trim();
+      if (!corpus) {
+        showError('err-build', '⚠ Please enter training text to construct a vocabulary.');
+        return;
+      }
+
+      setLoading('btn-build-vocab', true);
+
+      // Invalidate all previous embeddings, PCA projections, and custom entries
+      invalidateEmbeddingState(true);
+
+      setTimeout(() => {
+        const rawTokens = normalizeText(corpus);
+        const wordFreq = new Map();
+        const punctFreq = new Map();
+
+        // 1. Count actual corpus frequencies for complete standalone words and punctuation
+        for (const t of rawTokens) {
+          if (/^[.,!?;:()\[\]{}'"\`“”—\-]$/.test(t)) {
+            punctFreq.set(t, (punctFreq.get(t) || 0) + 1);
+          } else {
+            wordFreq.set(t, (wordFreq.get(t) || 0) + 1);
+          }
+        }
+
+        // 2. Discover candidate continuation suffixes & stems from actual corpus words
+        // Educational suffix partition heuristic: inspect valid suffix splits for words in the corpus.
+        // Requires stem length >= 3 to avoid arbitrary fragmentation of basic words.
+        const suffixMap = new Map(); // suf -> [ { word, stem, count, hasCorpusStem } ]
+
+        for (const [word, count] of wordFreq.entries()) {
+          for (let i = 3; i < word.length; i++) {
+            const stem = word.slice(0, i);
+            const suf = word.slice(i);
+            // Allow single-char suffix only for inflectional 's'
+            if (suf.length === 1 && suf !== 's') continue;
+            const hasCorpusStem = wordFreq.has(stem);
+
+            if (!suffixMap.has(suf)) suffixMap.set(suf, []);
+            suffixMap.get(suf).push({ word, stem, count, hasCorpusStem });
+          }
+        }
+
+        // 3. Filter candidate suffixes to avoid coincidental multi-letter tails
+        const acceptedSuffixes = new Map();
+
+        for (const [suf, occurrences] of suffixMap.entries()) {
+          const distinctWords = new Set(occurrences.map(o => o.word));
+          const hasCorpusStem = occurrences.some(o => o.hasCorpusStem);
+
+          // Heuristic safeguards against coincidental word endings in small corpora:
+          if (suf.length > 3 && !hasCorpusStem && distinctWords.size < 3) continue;
+          if (suf.length === 2 && suf !== 'ed' && !hasCorpusStem && distinctWords.size < 3) continue;
+
+          // Suffix must either attach to a standalone corpus stem or appear across >= 2 distinct words
+          if (hasCorpusStem || distinctWords.size >= 2) {
+            acceptedSuffixes.set(suf, {
+              count: occurrences.reduce((s, o) => s + o.count, 0),
+              words: distinctWords,
+              occurrences
+            });
+          }
+        }
+
+        // Remove trailing sub-suffixes (e.g. 'ng' when 'ing' already covers the matching words)
+        for (const suf of [...acceptedSuffixes.keys()]) {
+          for (const otherSuf of acceptedSuffixes.keys()) {
+            if (otherSuf !== suf && otherSuf.endsWith(suf)) {
+              const words = acceptedSuffixes.get(suf).words;
+              const otherWords = acceptedSuffixes.get(otherSuf).words;
+              const overlap = [...words].filter(w => otherWords.has(w)).length;
+              if (overlap >= words.size) {
+                acceptedSuffixes.delete(suf);
+                break;
+              }
+            }
+          }
+        }
+
+        // Build continuation tokens and derived stems with empirical decomposition support counts
+        const continuationTokens = new Map(); // contToken -> count
+        const derivedStems = new Map();        // stem -> support count (number of accepted decompositions)
+
+        for (const [suf, { count, occurrences }] of acceptedSuffixes.entries()) {
+          const contToken = '##' + suf;
+          continuationTokens.set(contToken, count);
+
+          for (const o of occurrences) {
+            derivedStems.set(o.stem, (derivedStems.get(o.stem) || 0) + o.count);
+            // If stem ends with doubled consonants before suffix (e.g. 'programm' from 'programming'),
+            // also record the base single-consonant stem ('program')
+            if (o.stem.length >= 4 && o.stem[o.stem.length - 1] === o.stem[o.stem.length - 2]) {
+              const baseStem = o.stem.slice(0, -1);
+              derivedStems.set(baseStem, (derivedStems.get(baseStem) || 0) + o.count);
+            }
+          }
+        }
+
+        // 4. Reset vocabulary and assign unique integer IDs
+        state.vocab.clear();
+        state.inverseVocab.clear();
+
+        // ID 0 is strictly reserved for [UNK]
+        state.vocab.set('[UNK]', {
+          id: 0,
+          type: 'special',
+          corpusFreq: 0,
+          stemSupport: 0,
+          continuationCount: 0,
+          freq: 0
+        });
+        state.inverseVocab.set(0, '[UNK]');
+
+        let nextId = 1;
+
+        // A. Punctuation tokens (sorted by corpus frequency desc)
+        const sortedPunct = [...punctFreq.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        for (const [p, count] of sortedPunct) {
+          state.vocab.set(p, {
+            id: nextId,
+            type: 'punctuation',
+            corpusFreq: count,
+            stemSupport: 0,
+            continuationCount: 0,
+            freq: count
+          });
+          state.inverseVocab.set(nextId, p);
+          nextId++;
+        }
+
+        // B. Standalone Corpus Words (words that independently appeared in training corpus)
+        // Sorted by corpus frequency desc, then alphabetically
+        const sortedWords = [...wordFreq.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        for (const [w, count] of sortedWords) {
+          const support = derivedStems.get(w) || 0;
+          state.vocab.set(w, {
+            id: nextId,
+            type: 'word',
+            corpusFreq: count,
+            stemSupport: support,
+            continuationCount: 0,
+            freq: count
+          });
+          state.inverseVocab.set(nextId, w);
+          nextId++;
+        }
+
+        // C. Purely Derived Stems (stems accepted from decompositions that did NOT appear standalone in corpus)
+        // Sorted by derived stem support desc, then alphabetically
+        const pureStems = [...derivedStems.entries()].filter(([stem]) => !wordFreq.has(stem));
+        pureStems.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        for (const [stem, support] of pureStems) {
+          state.vocab.set(stem, {
+            id: nextId,
+            type: 'stem',
+            corpusFreq: 0, // Did not appear standalone in corpus
+            stemSupport: support,
+            continuationCount: 0,
+            freq: support
+          });
+          state.inverseVocab.set(nextId, stem);
+          nextId++;
+        }
+
+        // D. Continuation subwords (prefixed with ##, sorted by empirical occurrence count desc)
+        // NOTE: Continuation tokens have their OWN unique integer token IDs, distinct from root tokens
+        const sortedCont = [...continuationTokens.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        for (const [cont, count] of sortedCont) {
+          state.vocab.set(cont, {
+            id: nextId,
+            type: 'continuation',
+            corpusFreq: 0,
+            stemSupport: count,
+            continuationCount: count,
+            freq: count
+          });
+          state.inverseVocab.set(nextId, cont);
+          nextId++;
+        }
+
+        state.vocabBuilt = true;
+        renderVocabTable();
+        setLoading('btn-build-vocab', false);
+
+        // If a sentence is already in the encode input, refresh its tokenization with new vocab
+        const encodeVal = document.getElementById('encode-input').value.trim();
+        if (encodeVal) {
+          tokenizeSentence();
+        }
+      }, 30);
+    }
+
+    function renderVocabTable() {
+      const tbody = document.getElementById('vocab-table-body');
+      const statsEl = document.getElementById('vocab-stats');
+      tbody.innerHTML = '';
+
+      const entries = [...state.vocab.entries()];
+
+      const wordCount = entries.filter(([, v]) => v.type === 'word').length;
+      const stemCount = entries.filter(([, v]) => v.type === 'stem').length;
+      const contCount = entries.filter(([, v]) => v.type === 'continuation').length;
+      const punctCount = entries.filter(([, v]) => v.type === 'punctuation').length;
+
+      statsEl.innerHTML = `
+        <div class="stat-chip"><span style="color:var(--text-muted)">Total Size:</span> <span class="stat-val">${entries.length}</span></div>
+        <div class="stat-chip"><span style="color:var(--accent-blue)">Corpus Words:</span> <span class="stat-val">${wordCount}</span></div>
+        <div class="stat-chip"><span style="color:#4338ca">Derived Stems:</span> <span class="stat-val">${stemCount}</span></div>
+        <div class="stat-chip"><span style="color:var(--accent-violet)">## Subwords:</span> <span class="stat-val">${contCount}</span></div>
+        <div class="stat-chip"><span style="color:var(--text-secondary)">Punctuation:</span> <span class="stat-val">${punctCount}</span></div>
+      `;
+
+      for (const [token, entry] of entries) {
+        const { id, type, corpusFreq, stemSupport, continuationCount } = entry;
+        const tr = document.createElement('tr');
+        let badgeClass = 'badge-word';
+        let typeDisplay = 'Corpus Word';
+
+        if (type === 'stem') {
+          badgeClass = 'badge-stem';
+          typeDisplay = 'Derived Stem';
+        } else if (type === 'continuation') {
+          badgeClass = 'badge-continuation';
+          typeDisplay = '## Continuation';
+        } else if (type === 'punctuation') {
+          badgeClass = 'badge-punctuation';
+          typeDisplay = 'Punctuation';
+        } else if (type === 'special') {
+          badgeClass = 'badge-special';
+          typeDisplay = 'Special Token';
+        }
+
+        // Corpus frequency column
+        let corpusFreqHtml = '—';
+        if (type === 'word' || type === 'punctuation') {
+          corpusFreqHtml = `<span style="font-family:var(--font-mono); font-weight:600;">${corpusFreq}</span>`;
+        } else if (type === 'stem') {
+          corpusFreqHtml = `<span style="color:var(--text-muted); font-family:var(--font-mono);" title="Derived from word decomposition, not present standalone">0</span>`;
+        } else if (type === 'special') {
+          corpusFreqHtml = `<span style="color:var(--text-muted); font-family:var(--font-mono);">0</span>`;
+        }
+
+        // Stem / Subword support column
+        let supportHtml = '—';
+        if (type === 'stem') {
+          supportHtml = `<span style="font-family:var(--font-mono); color:#4338ca; font-weight:500;">${stemSupport} decomp${stemSupport === 1 ? '' : 's'}</span>`;
+        } else if (type === 'word' && stemSupport > 0) {
+          supportHtml = `<span style="font-family:var(--font-mono); color:var(--text-secondary);">${stemSupport} decomp${stemSupport === 1 ? '' : 's'}</span>`;
+        } else if (type === 'continuation') {
+          supportHtml = `<span style="font-family:var(--font-mono); color:var(--accent-violet); font-weight:500;">${continuationCount || stemSupport} occurrence${(continuationCount || stemSupport) === 1 ? '' : 's'}</span>`;
+        }
+
+        tr.innerHTML = `
+          <td style="font-family:var(--font-mono); font-weight:600; color:var(--text-secondary);">#${id}</td>
+          <td style="font-family:var(--font-mono); font-weight:600;">${escHtml(token)}</td>
+          <td><span class="token-type-badge ${badgeClass}">${typeDisplay}</span></td>
+          <td>${corpusFreqHtml}</td>
+          <td>${supportHtml}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      document.getElementById('vocab-output').style.display = 'block';
+    }
+
+    function filterVocabTable() {
+      const query = (document.getElementById('vocab-search').value || '').trim().toLowerCase();
+      const rows = document.querySelectorAll('#vocab-table-body tr');
+      rows.forEach(tr => {
+        const id = tr.children[0] ? tr.children[0].textContent.replace('#', '').trim() : '';
+        const text = tr.children[1] ? tr.children[1].textContent.toLowerCase() : '';
+        const type = tr.children[2] ? tr.children[2].textContent.toLowerCase() : '';
+        if (!query || text.includes(query) || id === query || type.includes(query)) {
+          tr.style.display = '';
+        } else {
+          tr.style.display = 'none';
+        }
+      });
+    }
+
+    // ============================================================
+    //  01-B: WORDPIECE-INSPIRED GREEDY SUBWORD TOKENIZER
+    // ============================================================
+    function wordpieceWord(word) {
+      // If the word exists directly in vocabulary (e.g. root word or punctuation)
+      if (state.vocab.has(word)) {
+        return [word];
+      }
+
+      // Punctuation not in vocabulary becomes [UNK]
+      if (/^[.,!?;:()\[\]{}'"\`“”—\-]$/.test(word)) {
+        return state.vocab.has(word) ? [word] : ['[UNK]'];
+      }
+
+      // Greedy longest-match-first algorithm
+      const chars = Array.from(word);
+      let isBad = false;
+      let start = 0;
+      const subTokens = [];
+
+      while (start < chars.length) {
+        let end = chars.length;
+        let curSubstr = null;
+
+        while (start < end) {
+          let substr = chars.slice(start, end).join('');
+          if (start > 0) {
+            substr = '##' + substr;
+          }
+          if (state.vocab.has(substr)) {
+            curSubstr = substr;
+            break;
+          }
+          end--;
+        }
+
+        if (!curSubstr) {
+          isBad = true;
+          break;
+        }
+
+        subTokens.push(curSubstr);
+        start = end;
+      }
+
+      // If an entire word cannot be segmented using available vocabulary pieces,
+      // return one [UNK] token for that entire word.
+      if (isBad) {
+        return ['[UNK]'];
+      }
+
+      return subTokens;
+    }
+
+    function wordpieceTokenize(sentence) {
+      const words = normalizeText(sentence);
+      const result = [];
+      for (const word of words) {
+        result.push(...wordpieceWord(word));
+      }
+      return result;
+    }
+
+    function getTokenId(piece) {
+      // Consistent ID lookup: continuation tokens (##...) have their own distinct IDs in state.vocab
+      return state.vocab.has(piece) ? state.vocab.get(piece).id : 0;
+    }
+
+    function getTokenFreq(piece) {
+      return state.vocab.has(piece) ? state.vocab.get(piece).freq : 0;
+    }
+
+    function getTokenType(piece) {
+      if (piece === '[UNK]') return 'special';
+      if (piece.startsWith('##')) return 'continuation';
+      if (/^[.,!?;:()\[\]{}'"\`“”—\-]$/.test(piece)) return 'punctuation';
+      if (state.vocab.has(piece)) {
+        return state.vocab.get(piece).type; // 'word' or 'stem'
+      }
+      return 'word';
+    }
+
+    function renderTokenChips(tokens, containerId, inspectorId = 'token-inspector') {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      if (tokens.length === 0) {
+        container.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:8px 0;">No tokens generated.</div>';
+        return;
+      }
+
+      for (const piece of tokens) {
+        const id = getTokenId(piece);
+        const type = getTokenType(piece);
+
+        let chipClass = 'chip-word';
+        let typeLabel = 'Word';
+        if (type === 'stem') { chipClass = 'chip-stem'; typeLabel = 'Stem'; }
+        else if (type === 'continuation') { chipClass = 'chip-continuation'; typeLabel = '##Sub'; }
+        else if (type === 'punctuation') { chipClass = 'chip-punctuation'; typeLabel = 'Punct'; }
+        else if (type === 'special') { chipClass = 'chip-special'; typeLabel = 'UNK'; }
+
+        const chip = document.createElement('div');
+        chip.className = `token-chip ${chipClass}`;
+        chip.dataset.piece = piece;
+        chip.dataset.id = id;
+
+        chip.innerHTML = `
+      <div class="chip-label">${escHtml(piece)}</div>
+      <div class="chip-meta">#${id} · ${typeLabel}</div>
+    `;
+
+        chip.addEventListener('mouseenter', (e) => showChipTooltip(e, piece, id, type));
+        chip.addEventListener('mousemove', moveChipTooltip);
+        chip.addEventListener('mouseleave', hideChipTooltip);
+
+        chip.addEventListener('click', () => {
+          container.querySelectorAll('.token-chip').forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+          inspectToken(piece, id, inspectorId);
+        });
+
+        container.appendChild(chip);
+      }
+    }
+
+    function inspectToken(piece, id, inspectorId) {
+      const isUNK = piece === '[UNK]';
+      const type = getTokenType(piece);
+      const inVocab = state.vocab.has(piece);
+      const entry = state.vocab.get(piece);
+
+      let typeDisplay = 'Corpus Word (Standalone)';
+      let badgeStyle = 'background:var(--accent-blue-subtle); color:var(--accent-blue); border:1px solid var(--accent-blue-border);';
+      if (type === 'stem') {
+        typeDisplay = 'Derived Stem (From Corpus Decomposition)';
+        badgeStyle = 'background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe;';
+      } else if (type === 'continuation') {
+        typeDisplay = 'Continuation Subword (##)';
+        badgeStyle = 'background:var(--accent-violet-subtle); color:var(--accent-violet); border:1px dashed var(--accent-violet-border);';
+      } else if (type === 'punctuation') {
+        typeDisplay = 'Punctuation Token';
+        badgeStyle = 'background:var(--bg-surface-subtle); color:var(--text-secondary); border:1px solid var(--border);';
+      } else if (type === 'special') {
+        typeDisplay = 'Special Unknown Token ([UNK])';
+        badgeStyle = 'background:var(--accent-amber-subtle); color:var(--accent-amber); border:1px solid var(--accent-amber-border);';
+      }
+
+      const inspector = document.getElementById(inspectorId);
+      if (!inspector) return;
+
+      const corpusFreq = entry ? (entry.corpusFreq || 0) : 0;
+      const stemSupport = entry ? (entry.stemSupport || 0) : 0;
+      const contCount = entry ? (entry.continuationCount || 0) : 0;
+
+      let freqRows = '';
+      if (type === 'word') {
+        freqRows = `<div class="inspector-item"><span class="inspector-k">Corpus Frequency</span> <span class="inspector-v font-mono">${corpusFreq} standalone occurrence${corpusFreq === 1 ? '' : 's'}</span></div>`;
+        if (stemSupport > 0) {
+          freqRows += `<div class="inspector-item"><span class="inspector-k">Derived Stem Support</span> <span class="inspector-v font-mono">${stemSupport} decomposition${stemSupport === 1 ? '' : 's'}</span></div>`;
+        }
+      } else if (type === 'stem') {
+        freqRows = `
+          <div class="inspector-item"><span class="inspector-k">Corpus Frequency</span> <span class="inspector-v font-mono">0 (Derived stem, not in corpus standalone)</span></div>
+          <div class="inspector-item"><span class="inspector-k">Derived Stem Support</span> <span class="inspector-v font-mono">${stemSupport} accepted decomposition${stemSupport === 1 ? '' : 's'}</span></div>
+        `;
+      } else if (type === 'continuation') {
+        freqRows = `
+          <div class="inspector-item"><span class="inspector-k">Continuation Occurrences</span> <span class="inspector-v font-mono">${contCount || stemSupport} across corpus words</span></div>
+        `;
+      } else if (type === 'punctuation') {
+        freqRows = `<div class="inspector-item"><span class="inspector-k">Corpus Frequency</span> <span class="inspector-v font-mono">${corpusFreq} occurrence${corpusFreq === 1 ? '' : 's'}</span></div>`;
+      } else {
+        freqRows = `<div class="inspector-item"><span class="inspector-k">Corpus Frequency</span> <span class="inspector-v font-mono">0 (Special Token)</span></div>`;
+      }
+
+      inspector.style.display = 'block';
+      inspector.innerHTML = `
+    <div class="inspector-card">
+      <div class="inspector-header">
+        <span class="inspector-badge" style="${badgeStyle}">Token ID #${id}</span>
+        <span class="inspector-type">${typeDisplay}</span>
+      </div>
+      <div class="inspector-body">
+        <div class="inspector-item"><span class="inspector-k">Token String</span> <span class="inspector-v font-mono">"${escHtml(piece)}"</span></div>
+        <div class="inspector-item"><span class="inspector-k">Vocabulary Status</span> <span class="inspector-v" style="color:${inVocab ? 'var(--accent-green)' : 'var(--accent-amber)'};">${inVocab ? '✓ In Vocabulary' : '⚠ Out of Vocabulary'}</span></div>
+        ${freqRows}
+        <div class="inspector-item"><span class="inspector-k">Subword Prefix</span> <span class="inspector-v font-mono">${piece.startsWith('##') ? '## (Continuation)' : 'None (Word-Initial)'}</span></div>
+      </div>
+    </div>
+  `;
+    }
+
+    function showChipTooltip(e, piece, id, type) {
+      const tt = document.getElementById('chip-tooltip');
+      const entry = state.vocab.get(piece);
+      let desc = '';
+      if (type === 'continuation') {
+        const c = entry ? (entry.continuationCount || entry.stemSupport) : 0;
+        desc = `Continuation Subword (##) · ${c} occurrences`;
+      } else if (type === 'stem') {
+        const s = entry ? entry.stemSupport : 0;
+        desc = `Derived Stem · Support: ${s}`;
+      } else if (type === 'punctuation') {
+        const f = entry ? entry.corpusFreq : 0;
+        desc = `Punctuation · Freq: ${f}`;
+      } else if (type === 'special') {
+        desc = `Special [UNK] Token`;
+      } else {
+        const f = entry ? entry.corpusFreq : 0;
+        desc = `Corpus Word · Freq: ${f}`;
+      }
+      tt.innerHTML = `<strong>${escHtml(piece)}</strong> &nbsp;·&nbsp; ID: #${id} &nbsp;·&nbsp; ${desc}`;
+      tt.classList.add('visible');
+      moveChipTooltip(e);
+    }
+
+    function moveChipTooltip(e) {
+      const tt = document.getElementById('chip-tooltip');
+      tt.style.left = (e.clientX + 10) + 'px';
+      tt.style.top = (e.clientY - 34) + 'px';
+    }
+
+    function hideChipTooltip() {
+      document.getElementById('chip-tooltip').classList.remove('visible');
+    }
+
+    function tokenizeSentence() {
+      hideError('err-tokenize');
+      if (!state.vocabBuilt) {
+        showError('err-tokenize', '⚠ Please click "Build Vocabulary" in Section A first.');
+        return;
+      }
+
+      const sentence = document.getElementById('encode-input').value.trim();
+      if (!sentence) {
+        showError('err-tokenize', '⚠ Please enter a sentence to tokenize.');
+        return;
+      }
+
+      const tokens = wordpieceTokenize(sentence);
+      const knownCount = tokens.filter(t => t !== '[UNK]').length;
+      const coverage = tokens.length === 0 ? 0 : Math.round((knownCount / tokens.length) * 100);
+
+      // Original sentence display
+      const origEl = document.getElementById('token-original-sentence');
+      origEl.innerHTML = `<span class="orig-tag">Input</span><span class="orig-text">"${escHtml(sentence)}"</span>`;
+
+      renderTokenChips(tokens, 'token-output', 'token-inspector');
+
+      document.getElementById('token-meta').innerHTML = `
+    <strong>${tokens.length}</strong> total token${tokens.length === 1 ? '' : 's'} &nbsp;·&nbsp;
+    <span style="color:var(--accent-green); font-weight:600;">${knownCount}</span> known &nbsp;·&nbsp;
+    <span style="color:var(--accent-amber); font-weight:600;">${tokens.length - knownCount}</span> unknown ([UNK])
+  `;
+
+      document.getElementById('coverage-fill').style.width = coverage + '%';
+      document.getElementById('coverage-label').textContent = coverage + '% coverage';
+
+      document.getElementById('token-output-wrap').style.display = 'flex';
+
+      // Automatically inspect first chip
+      if (tokens.length > 0) {
+        const firstChip = document.querySelector('#token-output .token-chip');
+        if (firstChip) {
+          firstChip.classList.add('selected');
+          inspectToken(tokens[0], getTokenId(tokens[0]), 'token-inspector');
+        }
+      }
+    }
+
+    // ============================================================
+    //  02-B: DETERMINISTIC EMBEDDINGS (EDUCATIONAL HASH)
+    // ============================================================
+    function tokenToVector(token, dim = 32) {
+      // Deterministic FNV-1a seeded hash generator
+      let h = 2166136261 >>> 0;
+      for (let i = 0; i < token.length; i++) {
+        h ^= token.charCodeAt(i);
+        h = Math.imul(h, 16777619) >>> 0;
+      }
+      const vec = new Array(dim);
+      for (let d = 0; d < dim; d++) {
+        let hd = (h ^ (d * 2654435761)) >>> 0;
+        hd = Math.imul(hd, 2246822519) >>> 0;
+        hd ^= hd >>> 15;
+        hd = Math.imul(hd, 2246822519) >>> 0;
+        hd ^= hd >>> 13;
+        vec[d] = ((hd >>> 0) / 0xFFFFFFFF) * 2 - 1; // values in [-1, 1]
+      }
+      return vec;
+    }
+
+    function sentenceEmbedding(sentence) {
+      const tokens = wordpieceTokenize(sentence);
+      if (tokens.length === 0) return new Array(32).fill(0);
+      const vecs = tokens.map(t => tokenToVector(t));
+      const dim = 32;
+      const mean = new Array(dim).fill(0);
+      for (const v of vecs) {
+        for (let d = 0; d < dim; d++) mean[d] += v[d];
+      }
+      for (let d = 0; d < dim; d++) mean[d] /= vecs.length;
+      return mean;
+    }
+
+    function cosineSim(a, b) {
+      let dot = 0, na = 0, nb = 0;
+      for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        na += a[i] * a[i];
+        nb += b[i] * b[i];
+      }
+      const denom = Math.sqrt(na) * Math.sqrt(nb);
+      if (denom < 1e-12) return 0;
+      return Math.max(-1, Math.min(1, dot / denom));
+    }
+
+    function embNorm(v) {
+      return Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+    }
+
+    // ============================================================
+    //  02-C: APPROXIMATE PCA (POWER ITERATION + DEFLATION)
+    //  Includes safeguards against zero-variance, degenerate
+    //  dimensions, and non-finite coordinates.
+    // ============================================================
+    function computePCA(embeddings, nComponents = 3) {
+      const n = embeddings.length;
+      if (n < 2) return { error: 'At least 2 sentences are required for PCA calculation.' };
+      const dim = embeddings[0].length;
+
+      // 1. Mean-centering
+      const mean = new Array(dim).fill(0);
+      for (const e of embeddings) {
+        for (let d = 0; d < dim; d++) mean[d] += e[d] / n;
+      }
+      const centered = embeddings.map(e => e.map((v, d) => v - mean[d]));
+
+      // Check total variance to safeguard against identical embeddings
+      let totalVar = 0;
+      for (const row of centered) {
+        for (const v of row) totalVar += v * v;
+      }
+      if (totalVar < 1e-9) {
+        return { error: 'All sentence embeddings are identical or near-identical (zero variance across sentences). PCA requires distinct sentences.' };
+      }
+
+      // 2. Covariance matrix (dim x dim)
+      const cov = Array.from({ length: dim }, () => new Array(dim).fill(0));
+      for (const row of centered) {
+        for (let i = 0; i < dim; i++) {
+          for (let j = 0; j < dim; j++) {
+            cov[i][j] += (row[i] * row[j]) / (n - 1);
+          }
+        }
+      }
+
+      // 3. Approximate power iteration to estimate top eigenvectors
+      function extractEigenvector(A, numIter = 300) {
+        // Deterministic unit seed vector
+        let v = new Array(A.length).fill(0).map((_, i) => Math.sin(i + 1));
+        let norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+        if (norm < 1e-12) return { v: new Array(A.length).fill(0), eigenvalue: 0 };
+        v = v.map(x => x / norm);
+
+        for (let iter = 0; iter < numIter; iter++) {
+          const Av = new Array(A.length).fill(0);
+          for (let i = 0; i < A.length; i++) {
+            for (let j = 0; j < A.length; j++) Av[i] += A[i][j] * v[j];
+          }
+          norm = Math.sqrt(Av.reduce((s, x) => s + x * x, 0));
+          if (norm < 1e-12 || !Number.isFinite(norm)) break;
+          v = Av.map(x => x / norm);
+        }
+
+        const eigenvalue = v.reduce((s, x, i) => {
+          let Av_i = 0;
+          for (let j = 0; j < A.length; j++) Av_i += A[i][j] * v[j];
+          return s + x * Av_i;
+        }, 0);
+
+        return { v, eigenvalue: Number.isFinite(eigenvalue) ? Math.max(0, eigenvalue) : 0 };
+      }
+
+      const components = [];
+      const eigenvalues = [];
+      let A = cov.map(row => [...row]);
+
+      for (let c = 0; c < nComponents; c++) {
+        const { v, eigenvalue } = extractEigenvector(A);
+        eigenvalues.push(eigenvalue);
+        if (eigenvalue > 1e-8) {
+          components.push(v);
+          // Hotelling's deflation
+          for (let i = 0; i < dim; i++) {
+            for (let j = 0; j < dim; j++) {
+              A[i][j] -= eigenvalue * v[i] * v[j];
+            }
+          }
+        } else {
+          // Degenerate dimension (no variance along this axis)
+          components.push(new Array(dim).fill(0));
+        }
+      }
+
+      const validDimensions = eigenvalues.filter(ev => ev > 1e-8).length;
+
+      // Project centered embeddings
+      const projected = centered.map(row =>
+        components.map((pc, c) => (eigenvalues[c] > 1e-8 ? row.reduce((s, v, d) => s + v * pc[d], 0) : 0))
+      );
+
+      return { projected, components, mean, eigenvalues, validDimensions };
+    }
+
+    function projectNew(embedding, pcaComponents, pcaMean, scale = 1) {
+      const centered = embedding.map((v, d) => v - pcaMean[d]);
+      return pcaComponents.map(pc => centered.reduce((s, v, d) => s + v * pc[d], 0) * scale);
+    }
+
+    // ============================================================
+    //  02-D: THREE.JS INTERACTIVE 3D VISUALIZATION & RESOURCE CLEANUP
+    // ============================================================
+    function disposeMesh(mesh) {
+      if (!mesh) return;
+      // If mesh has children (e.g. custom halo ring)
+      while (mesh.children && mesh.children.length > 0) {
+        const child = mesh.children[0];
+        mesh.remove(child);
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+          else child.material.dispose();
+        }
+      }
+
+      if (mesh.geometry) {
+        mesh.geometry.dispose();
+      }
+      if (mesh.material) {
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(m => m.dispose());
+        } else {
+          mesh.material.dispose();
+        }
+      }
+      if (mesh.parent) {
+        mesh.parent.remove(mesh);
+      }
+    }
+
+    function clearScenePoints() {
+      // Clear hovered and selected references to avoid dangling state
+      state.hoveredMesh = null;
+      state.selectedMesh = null;
+
+      // Clear all preset sentence meshes & labels
+      for (const entry of state.sentences) {
+        if (entry.mesh) {
+          disposeMesh(entry.mesh);
+          entry.mesh = null;
+        }
+        if (entry.labelEl) {
+          entry.labelEl.remove();
+          entry.labelEl = null;
+        }
+      }
+      state.sentences = [];
+
+      // Clear all custom entry meshes & labels
+      for (const entry of state.customEntries) {
+        if (entry.mesh) {
+          disposeMesh(entry.mesh);
+          entry.mesh = null;
+        }
+        if (entry.labelEl) {
+          entry.labelEl.remove();
+          entry.labelEl = null;
+        }
+      }
+      state.customEntries = [];
+
+      // Guarantee removal of any floating .point-label DOM elements inside canvas-wrap
+      const wrap = document.getElementById('canvas-wrap');
+      if (wrap) {
+        wrap.querySelectorAll('.point-label').forEach(el => el.remove());
+      }
+
+      // Hide detail panel if open
+      const dp = document.getElementById('detail-panel');
+      if (dp) dp.classList.remove('visible');
+    }
+
+    function initThreeScene() {
+      const wrap = document.getElementById('canvas-wrap');
+      const canvas = document.getElementById('three-canvas');
+
+      state.scene = new THREE.Scene();
+      // Clean off-white background matching the light dashboard
+      state.scene.background = new THREE.Color(0xf8fafc);
+      state.scene.fog = new THREE.FogExp2(0xf8fafc, 0.035);
+
+      state.camera = new THREE.PerspectiveCamera(60, wrap.clientWidth / wrap.clientHeight, 0.01, 1000);
+      state.camera.position.set(0, 0, 8);
+
+      state.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      state.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      state.renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+
+      state.controls = new THREE.OrbitControls(state.camera, state.renderer.domElement);
+      state.controls.enableDamping = true;
+      state.controls.dampingFactor = 0.08;
+      state.controls.minDistance = 1.5;
+      state.controls.maxDistance = 25;
+
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+      state.scene.add(ambientLight);
+
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
+      dirLight1.position.set(6, 12, 8);
+      state.scene.add(dirLight1);
+
+      const dirLight2 = new THREE.DirectionalLight(0x2563eb, 0.15);
+      dirLight2.position.set(-6, -4, -6);
+      state.scene.add(dirLight2);
+
+      // Subtle coordinate grid floor
+      const grid = new THREE.GridHelper(14, 28, 0x94a3b8, 0xe2e8f0);
+      grid.position.y = -2.4;
+      state.scene.add(grid);
+
+      // 3D Axes helper in corner
+      const axes = new THREE.AxesHelper(1.2);
+      axes.position.set(-3.8, -2.35, -3.8);
+      state.scene.add(axes);
+
+      // Event listeners
+      window.addEventListener('resize', onWindowResize);
+      canvas.addEventListener('mousemove', onMouseMove);
+      canvas.addEventListener('click', onSceneClick);
+
+      renderLoop();
+    }
+
+    function onWindowResize() {
+      if (!state.renderer) return;
+      const wrap = document.getElementById('canvas-wrap');
+      state.camera.aspect = wrap.clientWidth / wrap.clientHeight;
+      state.camera.updateProjectionMatrix();
+      state.renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    }
+
+    function renderLoop() {
+      animFrameId = requestAnimationFrame(renderLoop);
+      if (!state.renderer) return;
+
+      if (state.animatingReset) {
+        resetLerpT += 1 / 45;
+        if (resetLerpT >= 1) {
+          resetLerpT = 1;
+          state.animatingReset = false;
+        }
+        const t = easeInOut(resetLerpT);
+        state.camera.position.lerpVectors(state.resetTarget.fromPos, new THREE.Vector3(0, 0, 8), t);
+        state.controls.target.lerpVectors(state.resetTarget.fromTarget, new THREE.Vector3(0, 0, 0), t);
+        state.controls.update();
+      } else {
+        state.controls.update();
+      }
+
+      updateLabels();
+      state.renderer.render(state.scene, state.camera);
+    }
+
+    function easeInOut(t) {
+      return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    }
+
+    function resetView() {
+      if (!state.camera) return;
+      state.resetTarget = {
+        fromPos: state.camera.position.clone(),
+        fromTarget: state.controls.target.clone()
+      };
+      resetLerpT = 0;
+      state.animatingReset = true;
+    }
+
+    function toggleAutoRotate() {
+      if (!state.controls) return;
+      state.controls.autoRotate = !state.controls.autoRotate;
+      state.controls.autoRotateSpeed = 1.4;
+      const btn = document.getElementById('btn-auto-rotate');
+      btn.classList.toggle('active', state.controls.autoRotate);
+    }
+
+    function addPointToScene(entry) {
+      // Points: distinct radius and materials for original preset vs custom additions
+      const isCustom = entry.isCustom;
+      const radius = isCustom ? 0.14 : 0.11;
+      const color = isCustom ? 0xea580c : getSentenceColor(entry.text);
+
+      const geo = new THREE.SphereGeometry(radius, 24, 24);
+      const mat = new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.2,
+        roughness: 0.25,
+        metalness: 0.15
+      });
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(...entry.pcaCoords);
+      mesh.userData = { entry, baseColor: color, baseScale: 1 };
+
+      // For custom user additions, add an outer wireframe orbit ring to guarantee visual distinction
+      if (isCustom) {
+        const ringGeo = new THREE.TorusGeometry(0.20, 0.015, 8, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xea580c, transparent: true, opacity: 0.75 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        mesh.add(ring);
+      }
+
+      state.scene.add(mesh);
+
+      // Scale in animation
+      mesh.scale.set(0, 0, 0);
+      let t = 0;
+      const grow = () => {
+        t += 0.06;
+        const s = Math.min(1, easeInOut(t));
+        mesh.scale.set(s, s, s);
+        if (t < 1) requestAnimationFrame(grow);
+      };
+      grow();
+
+      // Floating HTML Label
+      const labelEl = document.createElement('div');
+      labelEl.className = 'point-label';
+      labelEl.textContent = entry.text.length > 34 ? entry.text.slice(0, 31) + '…' : entry.text;
+      document.getElementById('canvas-wrap').appendChild(labelEl);
+
+      entry.mesh = mesh;
+      entry.labelEl = labelEl;
+    }
+
+    function updateLabels() {
+      if (!state.camera || !state.renderer) return;
+      const wrap = document.getElementById('canvas-wrap');
+      const W = wrap.clientWidth;
+      const H = wrap.clientHeight;
+
+      const allEntries = [...state.sentences, ...state.customEntries];
+      for (const entry of allEntries) {
+        if (!entry.mesh || !entry.labelEl) continue;
+        const pos = entry.mesh.position.clone();
+        pos.project(state.camera);
+
+        // Check if behind camera
+        if (pos.z > 1) {
+          entry.labelEl.classList.remove('visible');
+          continue;
+        }
+
+        const sx = ((pos.x + 1) / 2) * W;
+        const sy = ((1 - pos.y) / 2) * H;
+        entry.labelEl.style.left = sx + 'px';
+        entry.labelEl.style.top = sy + 'px';
+
+        const isHovered = entry.mesh === state.hoveredMesh;
+        const isSelected = entry.mesh === state.selectedMesh;
+        entry.labelEl.classList.toggle('visible', isHovered || isSelected);
+      }
+    }
+
+    function getAllMeshes() {
+      return [...state.sentences, ...state.customEntries].filter(e => e.mesh).map(e => e.mesh);
+    }
+
+    function onMouseMove(e) {
+      if (!state.renderer) return;
+      const rect = state.renderer.domElement.getBoundingClientRect();
+      MOUSE.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      MOUSE.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      state.raycaster.setFromCamera(MOUSE, state.camera);
+
+      const meshes = getAllMeshes();
+      const hits = state.raycaster.intersectObjects(meshes, true);
+
+      if (state.hoveredMesh && state.hoveredMesh !== state.selectedMesh) {
+        state.hoveredMesh.scale.set(1, 1, 1);
+        state.renderer.domElement.style.cursor = 'default';
+      }
+
+      if (hits.length > 0) {
+        // Find parent mesh if child ring was hit
+        let target = hits[0].object;
+        if (target.parent && target.parent.isMesh) target = target.parent;
+        state.hoveredMesh = target;
+        if (state.hoveredMesh !== state.selectedMesh) {
+          state.hoveredMesh.scale.set(1.35, 1.35, 1.35);
+        }
+        state.renderer.domElement.style.cursor = 'pointer';
+      } else {
+        state.hoveredMesh = null;
+        state.renderer.domElement.style.cursor = 'default';
+      }
+    }
+
+    function onSceneClick(e) {
+      if (!state.renderer) return;
+      const rect = state.renderer.domElement.getBoundingClientRect();
+      MOUSE.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      MOUSE.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      state.raycaster.setFromCamera(MOUSE, state.camera);
+
+      const meshes = getAllMeshes();
+      const hits = state.raycaster.intersectObjects(meshes, true);
+
+      if (state.selectedMesh) {
+        state.selectedMesh.scale.set(1, 1, 1);
+      }
+
+      if (hits.length > 0) {
+        let target = hits[0].object;
+        if (target.parent && target.parent.isMesh) target = target.parent;
+        state.selectedMesh = target;
+        state.selectedMesh.scale.set(1.35, 1.35, 1.35);
+
+        const entry = state.selectedMesh.userData.entry;
+        showDetailPanel(entry);
+      } else {
+        state.selectedMesh = null;
+        document.getElementById('detail-panel').classList.remove('visible');
+      }
+    }
+
+    function showDetailPanel(entry) {
+      document.getElementById('dp-sentence').textContent = entry.text + (entry.isCustom ? ' (User Custom Sentence)' : ' (Preset Sentence)');
+      document.getElementById('dp-x').textContent = entry.pcaCoords[0].toFixed(4);
+      document.getElementById('dp-y').textContent = entry.pcaCoords[1].toFixed(4);
+      document.getElementById('dp-z').textContent = entry.pcaCoords[2].toFixed(4);
+      document.getElementById('dp-norm').textContent = embNorm(entry.embedding).toFixed(4);
+      document.getElementById('detail-panel').classList.add('visible');
+    }
+
+    // ============================================================
+    //  02-E: EMBED AND PLOT EXECUTION (TRANSACTIONAL WORKFLOW)
+    //  Ensures that if calculation fails, previous visualization
+    //  and state are preserved without corruption.
+    // ============================================================
+    function embedAndPlot() {
+      hideError('err-embed');
+      const noticeEl = document.getElementById('pca-notice');
+      if (noticeEl) noticeEl.style.display = 'none';
+
+      if (!state.vocabBuilt) {
+        showError('err-embed', '⚠ Please click "Build Vocabulary" in Section 01 first.');
+        return;
+      }
+
+      // 1. Validate the input
+      const text = document.getElementById('embed-textarea').value.trim();
+      if (!text) {
+        showError('err-embed', '⚠ Please enter at least 2 sentences.');
+        return;
+      }
+
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length < 2) {
+        showError('err-embed', '⚠ At least 2 sentences are required to compare vectors and run PCA.');
+        return;
+      }
+
+      // Check for duplicate or all-identical sentences
+      const uniqueLines = [...new Set(lines.map(l => l.toLowerCase()))];
+      if (uniqueLines.length < 2) {
+        showError('err-embed', '⚠ All sentences are identical. Please enter at least 2 distinct sentences to compute variance.');
+        return;
+      }
+
+      setLoading('btn-embed', true);
+
+      setTimeout(() => {
+        try {
+          // 2. Generate new embeddings
+          const newEmbeddings = lines.map(line => sentenceEmbedding(line));
+
+          // 3. Calculate approximate PCA
+          const pcaRes = computePCA(newEmbeddings, 3);
+          if (pcaRes.error) {
+            showError('err-embed', '⚠ ' + pcaRes.error);
+            setLoading('btn-embed', false);
+            return; // Previous visualization is preserved!
+          }
+
+          // 4. Validate resulting coordinates
+          let maxCoord = 0;
+          for (const p of pcaRes.projected) {
+            for (const val of p) {
+              if (!Number.isFinite(val)) {
+                showError('err-embed', '⚠ Numerical instability encountered during PCA calculation. Coordinates are non-finite.');
+                setLoading('btn-embed', false);
+                return; // Previous visualization is preserved!
+              }
+              if (Math.abs(val) > maxCoord) maxCoord = Math.abs(val);
+            }
+          }
+
+          const newScale = maxCoord > 1e-6 ? 2.5 / maxCoord : 1;
+
+          // 5. Only after successful computation, clear old visualization resources!
+          clearScenePoints();
+
+          // 6. Update application state consistently
+          state.pcaComponents = pcaRes.components;
+          state.pcaMean = pcaRes.mean;
+          state.pcaScale = newScale;
+          state.validDimensions = pcaRes.validDimensions;
+
+          if (pcaRes.validDimensions < 3 && noticeEl) {
+            noticeEl.style.display = 'block';
+            noticeEl.innerHTML = `<strong>Notice on Dimensionality:</strong> The input sentences span only <strong>${pcaRes.validDimensions}</strong> significant principal dimension${pcaRes.validDimensions === 1 ? '' : 's'}. Coordinates along the remaining dimension${3 - pcaRes.validDimensions > 1 ? 's are' : ' is'} set to zero without inventing artificial axes.`;
+          }
+
+          for (let i = 0; i < lines.length; i++) {
+            const raw = pcaRes.projected[i];
+            const scaled = raw.map(v => (Number.isFinite(v) ? v * state.pcaScale : 0));
+            state.sentences.push({
+              text: lines[i],
+              embedding: newEmbeddings[i],
+              pcaCoords: scaled,
+              isCustom: false,
+              mesh: null,
+              labelEl: null
+            });
+          }
+
+          // 7. Render new visualization
+          const wrap = document.getElementById('canvas-wrap');
+          wrap.style.display = 'block';
+
+          if (!state.renderer) {
+            initThreeScene();
+          }
+
+          for (const entry of state.sentences) {
+            addPointToScene(entry);
+          }
+
+          document.getElementById('scene-legend').style.display = 'flex';
+          document.getElementById('closest-pairs-section').style.display = 'flex';
+
+          renderClosestPairs();
+          state.embeddingsComputed = true;
+
+          // Hide rebuild notice banners
+          const rebuildNotice = document.getElementById('rebuild-notice');
+          if (rebuildNotice) rebuildNotice.style.display = 'none';
+          const customNotice = document.getElementById('custom-rebuild-notice');
+          if (customNotice) customNotice.style.display = 'none';
+
+          // Enable custom entry button
+          const btnCustom = document.getElementById('btn-custom');
+          if (btnCustom) {
+            btnCustom.disabled = false;
+            btnCustom.classList.remove('disabled');
+            btnCustom.title = 'Tokenize, embed and project your custom sentence';
+          }
+
+        } catch (err) {
+          console.error('Embed & Plot execution error:', err);
+          showError('err-embed', '⚠ An error occurred during embedding computation: ' + err.message);
+        } finally {
+          setLoading('btn-embed', false);
+        }
+      }, 40);
+    }
+
+    // ============================================================
+    //  02-F: CLOSEST PAIRS TABLE
+    // ============================================================
+    function renderClosestPairs() {
+      const all = [...state.sentences, ...state.customEntries];
+      const pairs = [];
+      for (let i = 0; i < all.length; i++) {
+        for (let j = i + 1; j < all.length; j++) {
+          const sim = cosineSim(all[i].embedding, all[j].embedding);
+          pairs.push({ a: all[i], b: all[j], sim });
+        }
+      }
+      pairs.sort((x, y) => y.sim - x.sim);
+      const top5 = pairs.slice(0, 5);
+
+      const tbody = document.getElementById('closest-pairs-body');
+      tbody.innerHTML = '';
+
+      top5.forEach(({ a, b, sim }, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'pair-row';
+        tr.title = 'Click to pulse and highlight both sentences in the 3D space';
+        tr.innerHTML = `
+      <td><span class="rank-badge">#${idx + 1}</span></td>
+      <td style="font-weight:500;">${escHtml(a.text)}</td>
+      <td style="font-weight:500;">${escHtml(b.text)}</td>
+      <td style="color:var(--accent-blue); font-family:var(--font-mono); font-weight:700;">${sim >= 0 ? '+' : ''}${sim.toFixed(4)}</td>
+    `;
+        tr.addEventListener('click', () => pulseHighlightPair(a, b));
+        tbody.appendChild(tr);
+      });
+    }
+
+    function pulseHighlightPair(a, b) {
+      if (a.labelEl) a.labelEl.classList.add('visible');
+      if (b.labelEl) b.labelEl.classList.add('visible');
+      setTimeout(() => {
+        if (a.labelEl && a.mesh !== state.hoveredMesh && a.mesh !== state.selectedMesh) {
+          a.labelEl.classList.remove('visible');
+        }
+        if (b.labelEl && b.mesh !== state.hoveredMesh && b.mesh !== state.selectedMesh) {
+          b.labelEl.classList.remove('visible');
+        }
+      }, 2500);
+
+      const pulseMesh = (mesh, color) => {
+        if (!mesh) return;
+        const mat = mesh.material;
+        const origEmissive = mat.emissive.getHex();
+        const origScale = mesh.scale.x;
+        const pulseColor = new THREE.Color(color);
+        let t = 0;
+        const animate = () => {
+          t += 0.04;
+          const alpha = Math.abs(Math.sin(t * Math.PI * 3));
+          mat.emissive.lerp(pulseColor, alpha);
+          mesh.scale.setScalar(origScale * (1 + 0.35 * alpha));
+          if (t < 1) requestAnimationFrame(animate);
+          else {
+            mat.emissive.setHex(origEmissive);
+            mat.emissiveIntensity = 0.2;
+            mesh.scale.setScalar(origScale);
+          }
+        };
+        mat.emissiveIntensity = 0.8;
+        animate();
+      };
+
+      pulseMesh(a.mesh, 0x2563eb);
+      pulseMesh(b.mesh, 0x7c3aed);
+    }
+
+    // ============================================================
+    //  03: TRY YOUR OWN WORD OR SENTENCE
+    // ============================================================
+    function addCustomEntry() {
+      hideError('err-custom');
+
+      if (!state.vocabBuilt) {
+        showError('err-custom', '⚠ Please click "Build Vocabulary" in Section 01 first.');
+        return;
+      }
+      if (!state.embeddingsComputed || !state.pcaComponents) {
+        showError('err-custom', "⚠ The vocabulary changed or embeddings have not been computed yet. Please click 'Embed and Plot' in Section 02 first so the 3D space is established.");
+        return;
+      }
+
+      const text = document.getElementById('custom-input').value.trim();
+      if (!text) {
+        showError('err-custom', '⚠ Please enter some text to tokenize and embed.');
+        return;
+      }
+
+      // Display original text
+      const origEl = document.getElementById('custom-original-sentence');
+      origEl.innerHTML = `<span class="orig-tag">Input</span><span class="orig-text">"${escHtml(text)}"</span>`;
+
+      // Tokenize
+      const tokens = wordpieceTokenize(text);
+      renderTokenChips(tokens, 'custom-token-output', 'custom-token-inspector');
+
+      const known = tokens.filter(t => t !== '[UNK]').length;
+      document.getElementById('custom-token-meta').innerHTML = `
+    <strong>${tokens.length}</strong> token${tokens.length === 1 ? '' : 's'} &nbsp;·&nbsp;
+    <span style="color:var(--accent-green); font-weight:600;">${known}</span> known &nbsp;·&nbsp;
+    <span style="color:var(--accent-amber); font-weight:600;">${tokens.length - known}</span> unknown ([UNK])
+  `;
+
+      if (tokens.length > 0) {
+        const firstChip = document.querySelector('#custom-token-output .token-chip');
+        if (firstChip) {
+          firstChip.classList.add('selected');
+          inspectToken(tokens[0], getTokenId(tokens[0]), 'custom-token-inspector');
+        }
+      }
+
+      // Generate 32D embedding
+      const embedding = sentenceEmbedding(text);
+
+      // Project into the exact same existing PCA basis
+      const rawCoords = projectNew(embedding, state.pcaComponents, state.pcaMean, state.pcaScale);
+
+      const entry = {
+        text,
+        embedding,
+        pcaCoords: rawCoords,
+        isCustom: true,
+        mesh: null,
+        labelEl: null
+      };
+      state.customEntries.push(entry);
+      addPointToScene(entry);
+
+      // Cosine similarity against all existing sentences
+      const sims = state.sentences.map(s => ({
+        entry: s,
+        sim: cosineSim(embedding, s.embedding)
+      }));
+      sims.sort((a, b) => b.sim - a.sim);
+
+      const best = sims[0];
+      if (best) {
+        document.getElementById('closest-match-text').innerHTML = `
+      <strong>«${escHtml(best.entry.text)}»</strong> &nbsp;·&nbsp; Cosine Similarity: 
+      <span style="font-family:var(--font-mono); color:var(--accent-blue); font-weight:700;">${best.sim >= 0 ? '+' : ''}${best.sim.toFixed(4)}</span>
+    `;
+
+        // Pulse highlight both the newly added custom point and its closest match
+        setTimeout(() => {
+          pulseHighlightPair(entry, best.entry);
+        }, 450);
+      }
+
+      const customResEl = document.getElementById('custom-result');
+      customResEl.style.display = 'flex';
+      customResEl.classList.add('visible');
+
+      // Update closest pairs ranking table
+      renderClosestPairs();
+    }
+  </script>
+</body>
+
+</html>
